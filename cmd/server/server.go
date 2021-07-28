@@ -23,5 +23,7 @@ func HandleRequests(env Env) {
 	router.HandleFunc("/event_frequencies/{name}", env.ReturnEventFrequency).Methods("GET")
 	router.HandleFunc("/event_frequencies", env.ReturnAllEventsFrequencies).Methods("GET")
 
+	router.HandleFunc("event_frequencies/{name}/hist", env.ReturnEventFrequencyHistogram).Methods("GET")
+
 	log.Fatal(http.ListenAndServe(":10000", router))
 }

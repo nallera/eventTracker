@@ -105,3 +105,7 @@ func (env Env) ReturnAllEventsFrequencies(w http.ResponseWriter, r *http.Request
 		return
 	}
 }
+
+func (env Env) ReturnEventFrequencyHistogram(w http.ResponseWriter, r *http.Request) {
+
+}
