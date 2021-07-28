@@ -72,11 +72,28 @@ func (env Env) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (env Env) GetEventFrequency(w http.ResponseWriter, r *http.Request) {
+func (env Env) ReturnEventFrequency(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	name := params["name"]
 
+	retrievedEvent, err := env.EventService.EventFrequencyByName(name)
+	if errors.Is(err, event.ErrEventNotFound) {
+		http.Error(w, fmt.Sprintf(err.Error(), name), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(retrievedEvent)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
-func (env Env) GetAllEventsFrequencies(w http.ResponseWriter, r *http.Request) {
+func (env Env) ReturnAllEventsFrequencies(w http.ResponseWriter, r *http.Request) {
 	retrievedEvents, err := env.EventService.AllEventsFrequencies()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

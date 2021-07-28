@@ -59,6 +59,15 @@ func (es EventService) EventsByName(name string) (events []Event, err error) {
 	return events, nil
 }
 
+func (es EventService) EventFrequencyByName(name string) (eventFreq *EventFreq, err error) {
+	eventFreq, e := es.EventFrequenciesDB.getEventByName(name)
+	if e != nil {
+		return nil, ErrEventNotFound
+	}
+
+	return eventFreq, nil
+}
+
 func (es EventService) AllEvents() (events []Event, err error) {
 	events, e := es.EventDB.getEvents()
 	if e != nil {

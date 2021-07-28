@@ -20,8 +20,8 @@ func HandleRequests(env Env) {
 
 	router.HandleFunc("/events/{name}", env.CreateEvent).Methods("POST") //N in body
 
-	router.HandleFunc("/event_frequencies/{name}", env.GetEventFrequency).Methods("GET")
-	router.HandleFunc("/event_frequencies", env.GetAllEventsFrequencies).Methods("GET")
+	router.HandleFunc("/event_frequencies/{name}", env.ReturnEventFrequency).Methods("GET")
+	router.HandleFunc("/event_frequencies", env.ReturnAllEventsFrequencies).Methods("GET")
 
 	log.Fatal(http.ListenAndServe(":10000", router))
 }
