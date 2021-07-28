@@ -56,7 +56,7 @@ func (es EventService) EventsByName(name string) (events []Event, err error) {
 		return nil, ErrEventNotFound
 	}
 
-	return events, ErrEventNotFound
+	return events, nil
 }
 
 func (es EventService) AllEvents() (events []Event, err error) {
