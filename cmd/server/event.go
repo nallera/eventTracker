@@ -6,6 +6,7 @@ import (
 	event "eventTracker/internal"
 	"fmt"
 	"github.com/gorilla/mux"
+	"io"
 	"net/http"
 	"time"
 )
@@ -55,8 +56,10 @@ func (env Env) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	var body event.EventBody
 
 	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if errors.Is(err, io.EOF) {
+		body.Count = 1
+	} else if err != nil {
+		http.Error(w, fmt.Sprintf("Json decoder error: %s", err.Error()), http.StatusBadRequest)
 		return
 	}
 	err = env.EventService.CreateEvent(name, body.Count, time.Now())

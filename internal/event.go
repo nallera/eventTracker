@@ -28,7 +28,7 @@ type EventFreq struct {
 }
 
 type EventBody struct {
-	Count uint64 `json:"count"`
+	Count uint64 `json:"count,omitempty"`
 }
 
 type EventService struct {
@@ -130,6 +130,8 @@ func (es EventService) CreateEvent(name string, count uint64, date time.Time) (e
 			return ErrUpdateEventFreqDB
 		}
 	}
+	evf,_ := es.EventFrequenciesDB.getEvents()
+	println(fmt.Sprintf("eventFreqDB: %v", evf))
 
 	return nil
 }
