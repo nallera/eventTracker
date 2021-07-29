@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"eventTracker/internal/model"
@@ -9,8 +8,6 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"gonum.org/v1/plot/plotter"
-	"image"
-	"image/jpeg"
 	"io"
 	"net/http"
 	"strconv"
@@ -141,26 +138,14 @@ func (env Env) ReturnEventFrequencyHistogram(w http.ResponseWriter, r *http.Requ
 	for _, h := range retrievedEvent.HourCount {
 		values = append(values, 100 * float64(h) / float64(retrievedEvent.TotalCount))
 	}
-	plotting.PlotHistogram(values, retrievedEvent.Name)
+	writer := plotting.PlotHistogram(values, retrievedEvent.Name)
 
-	//err = writeImage(w, histImage)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-}
 
-func writeImage(w http.ResponseWriter, img *image.Image) (err error){
-	buffer := new(bytes.Buffer)
-	if err := jpeg.Encode(buffer, *img, nil); err != nil {
-		return errors.New("unable to encode image")
+	imgBytes, err := writer.WriteTo(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-
 	w.Header().Set("Content-Type", "image/jpeg")
-	w.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
-	if _, err := w.Write(buffer.Bytes()); err != nil {
-		return errors.New("unable to write image")
-	}
-
-	return nil
+	w.Header().Set("Content-Length", strconv.Itoa(int(imgBytes)))
 }

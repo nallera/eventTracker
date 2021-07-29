@@ -6,15 +6,19 @@ import (
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/plotutil"
 	"gonum.org/v1/plot/vg"
+	"io"
 )
 
-func PlotHistogram(values plotter.Values, name string) {
+func PlotHistogram(values plotter.Values, name string) io.WriterTo {
 	p := plot.New()
 	p.Title.Text = fmt.Sprintf("Frequency of %s", name)
 
 	p.X.Label.Text = "Hour"
 	p.X.Max = 24
+	p.X.Tick.Marker = plot.DefaultTicks{}
+
 	p.Y.Label.Text = "% of occurence"
+	p.Y.Tick.Marker = plot.ConstantTicks{}
 
 	barChart, err := plotter.NewBarChart(values, 5)
 	if err != nil {
@@ -27,8 +31,11 @@ func PlotHistogram(values plotter.Values, name string) {
 
 	p.Add(barChart)
 
-	if err := p.Save(3*vg.Inch, 3*vg.Inch, "barChart.png"); err != nil {
+	writer, err := p.WriterTo(6*vg.Inch, 3*vg.Inch, "png")
+	if err != nil {
 		panic(err)
 	}
+
+	return writer
 }
 
