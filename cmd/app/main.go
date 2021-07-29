@@ -2,13 +2,21 @@ package main
 
 import (
 	"eventTracker/cmd/server"
-	event "eventTracker/internal"
+	"eventTracker/internal/db"
+	"eventTracker/internal/event"
 )
 
 func main() {
+	eventList, eventFreqList := db.DBsStartPoint(true)
 	var (
-		eventDB = event.EventDB{}
-		eventFrequenciesDB = event.EventFreqDB{}
+		eventDB = db.EventDB{
+			Events: eventList,
+			LastID: 4,
+		}
+		eventFrequenciesDB = db.EventFreqDB{
+			EventFrequencies: eventFreqList,
+			LastID:           0,
+		}
 	)
 
 	env := server.Env{
