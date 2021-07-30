@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"eventTracker/internal/db"
 	"eventTracker/internal/model"
 	"fmt"
@@ -9,37 +10,19 @@ import (
 )
 
 type EventServiceI interface {
-	StartDBs() (err error)
- 	EventsByName(name string) (events []model.Event, err error)
- 	EventsByDateRange(startDate, endDate string) (events []model.Event, err error)
- 	EventFrequencyByName(name string) (eventFreq *model.EventFreq, err error)
- 	AllEvents() (events []model.Event, err error)
- 	AllEventsFrequencies() (events []model.EventFreq, err error)
- 	EventByID(ID uint64) (event *model.Event, err error)
- 	CreateEvent(name string, count uint64, date time.Time) (err error)
+ 	EventsByName(EventDBHandler db.EventDBHandler, name string) (events []model.Event, err error)
+ 	EventsByDateRange(EventDBHandler db.EventDBHandler, startDate, endDate string) (events []model.Event, err error)
+ 	AllEvents(EventDBHandler db.EventDBHandler) (events []model.Event, err error)
+ 	EventByID(EventDBHandler db.EventDBHandler, ID uint64) (event model.Event, err error)
+ 	CreateEvent(EventDBHandler db.EventDBHandler, EventDBFreqHandler db.EventFreqDBHandler, name string, count uint64, date time.Time) (err error)
+	EventFrequencyByName(EventDBFreqHandler db.EventFreqDBHandler, name string) (eventFreq model.EventFreq, err error)
+	AllEventsFrequencies(EventDBFreqHandler db.EventFreqDBHandler) (events []model.EventFreq, err error)
 }
 
-type EventService struct {
-	EventDB            *db.EventDB
-	EventFrequenciesDB *db.EventFreqDB
-}
+type EventService struct {}
 
-func (es EventService) StartDBs() (err error) {
-	e := es.EventDB.StartDB()
-	if e != nil {
-		return model.ErrStartEventDB
-	}
-
-	e = es.EventFrequenciesDB.StartDB()
-	if e != nil {
-		return model.ErrStartEventFreqDB
-	}
-
-	return nil
-}
-
-func (es EventService) EventsByName(name string) (events []model.Event, err error) {
-	events, e := es.EventDB.GetEventsByName(name)
+func (es EventService) EventsByName(EventDBHandler db.EventDBHandler, name string) (events []model.Event, err error) {
+	events, e := EventDBHandler.GetEventsByName(name)
 	if e != nil {
 		return nil, model.ErrEventNotFound
 	}
@@ -47,8 +30,8 @@ func (es EventService) EventsByName(name string) (events []model.Event, err erro
 	return events, nil
 }
 
-func (es EventService) EventsByDateRange(startDate, endDate string) (events []model.Event, err error) {
-	events, e := es.EventDB.GetEventsByDateRange(startDate, endDate)
+func (es EventService) EventsByDateRange(EventDBHandler db.EventDBHandler, startDate, endDate string) (events []model.Event, err error) {
+	events, e := EventDBHandler.GetEventsByDateRange(startDate, endDate)
 	if e != nil {
 		return []model.Event{}, nil
 	}
@@ -56,17 +39,8 @@ func (es EventService) EventsByDateRange(startDate, endDate string) (events []mo
 	return events, nil
 }
 
-func (es EventService) EventFrequencyByName(name string) (eventFreq *model.EventFreq, err error) {
-	eventFreq, e := es.EventFrequenciesDB.GetEventByName(name)
-	if e != nil {
-		return nil, model.ErrEventNotFound
-	}
-
-	return eventFreq, nil
-}
-
-func (es EventService) AllEvents() (events []model.Event, err error) {
-	events, e := es.EventDB.GetEvents()
+func (es EventService) AllEvents(EventDBHandler db.EventDBHandler) (events []model.Event, err error) {
+	events, e := EventDBHandler.GetEvents()
 	if e != nil {
 		return []model.Event{}, nil
 	}
@@ -74,44 +48,37 @@ func (es EventService) AllEvents() (events []model.Event, err error) {
 	return events, nil
 }
 
-func (es EventService) AllEventsFrequencies() (events []model.EventFreq, err error) {
-	events, e := es.EventFrequenciesDB.GetEvents()
+func (es EventService) EventByID(EventDBHandler db.EventDBHandler, ID uint64) (event model.Event, err error) {
+	event, e := EventDBHandler.GetEventByID(ID)
 	if e != nil {
-		return []model.EventFreq{}, nil
-	}
-
-	return events, nil
-}
-
-func (es EventService) EventByID(ID uint64) (event *model.Event, err error) {
-	event, e := es.EventDB.GetEventByID(ID)
-	if e != nil {
-		return nil, model.ErrEventNotFound
+		return model.Event{}, model.ErrEventNotFound
 	}
 
 	return event, nil
 }
 
-func (es EventService) CreateEvent(name string, count uint64, date time.Time) (err error) {
+func (es EventService) CreateEvent(EventDBHandler db.EventDBHandler, EventDBFreqHandler db.EventFreqDBHandler, name string, count uint64, date time.Time) (err error) {
 	dateYYYYmmdd := date.Format("20060102")
 
-	event, e := es.EventDB.GetEventByNameAndDate(name, dateYYYYmmdd)
-	if e != nil {
+	event, e := EventDBHandler.GetEventByNameAndDate(name, dateYYYYmmdd)
+	if errors.Is(e, model.ErrEventNotFound) {
 		println(fmt.Sprintf("Creating new event %s", name))
 
-		_, e := es.EventDB.CreateEvent(name, count, dateYYYYmmdd)
+		e := EventDBHandler.CreateEvent(name, count, dateYYYYmmdd)
 		if e != nil {
-			return model.ErrInsertEventDB
+			return errors.New(fmt.Sprintf(model.ErrInsertEventDB.Error(), e.Error()))
 		}
+	} else if e != nil {
+		return errors.New(fmt.Sprintf("error getting event by name and date: %s", e))
 	} else {
 		println(fmt.Sprintf("Updating event %s", name))
 
-		e := es.EventDB.UpdateEvent(event.ID, count)
+		e := EventDBHandler.UpdateEvent(event.ID, count)
 		if e != nil {
-			return model.ErrUpdateEventDB
+			return errors.New(fmt.Sprintf(model.ErrUpdateEventDB.Error(), e.Error()))
 		}
 	}
-	ev,_ := es.EventDB.GetEvents()
+	ev,_ := EventDBHandler.GetEvents()
 	println(fmt.Sprintf("eventDB: %v", ev))
 
 	hour := date.Format("15")
@@ -120,24 +87,44 @@ func (es EventService) CreateEvent(name string, count uint64, date time.Time) (e
 		return model.ErrParseHour
 	}
 
-	eventFreq, e := es.EventFrequenciesDB.GetEventByName(name)
-	if e != nil {
+	eventFreq, e := EventDBFreqHandler.GetEventByName(name)
+	if errors.Is(e, model.ErrEventNotFound) {
 		println(fmt.Sprintf("Creating new event %s frequency", name))
 
-		_, e = es.EventFrequenciesDB.CreateEvent(name, count, hourUint)
+		e = EventDBFreqHandler.CreateEvent(name, count, hourUint)
 		if e != nil {
-			return model.ErrInsertEventFreqDB
+			return errors.New(fmt.Sprintf(model.ErrInsertEventFreqDB.Error(), e.Error()))
 		}
+	} else if e != nil{
+		return errors.New(fmt.Sprintf("error getting event freq by name: %s", e))
 	} else {
 		println(fmt.Sprintf("Updating event %s frequency", name))
 
-		e = es.EventFrequenciesDB.UpdateEvent(eventFreq.ID, count, hourUint)
+		e = EventDBFreqHandler.UpdateEvent(eventFreq.ID, count, hourUint)
 		if e != nil {
-			return model.ErrUpdateEventFreqDB
+			return errors.New(fmt.Sprintf(model.ErrUpdateEventFreqDB.Error(), e.Error()))
 		}
 	}
-	evf,_ := es.EventFrequenciesDB.GetEvents()
+	evf,_ := EventDBFreqHandler.GetEvents()
 	println(fmt.Sprintf("eventFreqDB: %v", evf))
 
 	return nil
+}
+
+func (es EventService) AllEventsFrequencies(EventDBFreqHandler db.EventFreqDBHandler) (events []model.EventFreq, err error) {
+	events, e := EventDBFreqHandler.GetEvents()
+	if e != nil {
+		return []model.EventFreq{}, nil
+	}
+
+	return events, nil
+}
+
+func (es EventService) EventFrequencyByName(EventDBFreqHandler db.EventFreqDBHandler, name string) (eventFreq model.EventFreq, err error) {
+	eventFreq, e := EventDBFreqHandler.GetEventByName(name)
+	if e != nil {
+		return model.EventFreq{}, model.ErrEventNotFound
+	}
+
+	return eventFreq, nil
 }

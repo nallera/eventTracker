@@ -1,6 +1,7 @@
 package server
 
 import (
+	"eventTracker/internal/db"
 	"eventTracker/internal/event"
 	"github.com/gorilla/mux"
 	"log"
@@ -9,6 +10,8 @@ import (
 
 type Env struct {
 	EventService event.EventServiceI
+	EventDBHandler db.EventDBHandler
+	EventFreqDBHandler db.EventFreqDBHandler
 }
 
 func HandleRequests(env Env) {

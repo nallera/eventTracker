@@ -1,64 +1,83 @@
 package db
 
 import (
+	"database/sql"
+	"encoding/json"
 	"eventTracker/internal/model"
-	"time"
+	"fmt"
 )
 
+type EventDBHandler interface {
+	GetEvents() (events []model.Event, err error)
+	GetEventsByName(name string) (retrievedEvents []model.Event, err error)
+	GetEventsByDateRange(startDate, endDate string) (retrievedEvents []model.Event, err error)
+	GetEventByNameAndDate(name, date string) (retrievedEvent model.Event, err error)
+	GetEventByID(ID uint64) (retrievedEvent model.Event, err error)
+	CreateEvent(name string, count uint64, date string) (err error)
+	UpdateEvent(ID, count uint64) (err error)
+}
+
+type EventFreqDBHandler interface {
+	GetEvents() (retrievedEvents []model.EventFreq, err error)
+	GetEventByID(ID uint64) (retrievedEvent model.EventFreq, err error)
+	GetEventByName(name string) (retrievedEvent model.EventFreq, err error)
+	CreateEvent(name string, count uint64, hour uint64) (err error)
+	UpdateEvent(ID, count, hour uint64) (err error)
+}
+
 type EventDB struct {
-	Events  []*model.Event
-	LastID  uint64
+	Database *sql.DB
 }
 
 type EventFreqDB struct {
-	EventFrequencies  []*model.EventFreq
-	LastID            uint64
+	Database *sql.DB
 }
 
-func (db *EventDB) StartDB() (err error) {
-	db.LastID = 0
-	return nil
-}
-
-func (db *EventDB) GetEvents() (events []model.Event, err error) {
-	for _, ev := range db.Events {
-		events = append(events, *ev)
-	}
-	return events, nil
-}
-
-func (db *EventDB) GetEventsByName(name string) (retrievedEvents []model.Event, err error) {
-	for _, ev := range db.Events {
-		if ev.Name == name {
-			retrievedEvents = append(retrievedEvents, *ev)
-		}
-	}
-
-	if retrievedEvents == nil {
-		return nil, model.ErrEventNotFound
-	}
-
-	return retrievedEvents, nil
-}
-
-func (db *EventDB) GetEventsByDateRange(startDate, endDate string) (retrievedEvents []model.Event, err error) {
-	startDateTime, e := time.Parse("20060102", startDate)
+func (db EventDB) GetEvents() (retrievedEvents []model.Event, err error) {
+	rows, e := db.Database.Query("SELECT * FROM eventDB")
 	if e != nil {
-		return nil, model.ErrParseDate
-	}
-	endDateTime, e := time.Parse("20060102", endDate)
-	if e != nil {
-		return nil, model.ErrParseDate
+		return nil, e
 	}
 
-	for _, ev := range db.Events {
-		eventDate, e := time.Parse("20060102", ev.Date)
+	for rows.Next() {
+		var event model.Event
+
+		e = rows.Scan(&event.ID, &event.Date, &event.Name, &event.Count)
 		if e != nil {
-			return nil, model.ErrParseDate
+			return nil, e
 		}
-		if eventDate.After(startDateTime) && eventDate.Before(endDateTime) {
-			retrievedEvents = append(retrievedEvents, *ev)
+
+		retrievedEvents = append(retrievedEvents, event)
+	}
+
+	e = rows.Close()
+	if e != nil {
+		return nil, e
+	}
+
+	return retrievedEvents, nil
+}
+
+func (db EventDB) GetEventsByName(name string) (retrievedEvents []model.Event, err error) {
+	rows, e := db.Database.Query(fmt.Sprintf("SELECT * FROM eventDB WHERE name LIKE \"%s\"", name))
+	if e != nil {
+		return nil, e
+	}
+
+	for rows.Next() {
+		var event model.Event
+
+		e = rows.Scan(&event.ID, &event.Date, &event.Name, &event.Count)
+		if e != nil {
+			return nil, e
 		}
+
+		retrievedEvents = append(retrievedEvents, event)
+	}
+
+	e = rows.Close()
+	if e != nil {
+		return nil, e
 	}
 
 	if retrievedEvents == nil {
@@ -68,121 +87,256 @@ func (db *EventDB) GetEventsByDateRange(startDate, endDate string) (retrievedEve
 	return retrievedEvents, nil
 }
 
-func (db *EventDB) GetEventByNameAndDate(name, date string) (retrievedEvent *model.Event, err error) {
-	for _, ev := range db.Events {
-		if ev.Name == name && ev.Date == date{
-			return ev, nil
-		}
+func (db EventDB) GetEventsByDateRange(startDate, endDate string) (retrievedEvents []model.Event, err error) {
+	//startDateTime, e := time.Parse("20060102", startDate)
+	//if e != nil {
+	//	return nil, model.ErrParseDate
+	//}
+	//endDateTime, e := time.Parse("20060102", endDate)
+	//if e != nil {
+	//	return nil, model.ErrParseDate
+	//}
+
+	//for _, ev := range db.Events {
+	//	eventDate, e := time.Parse("20060102", ev.Date)
+	//	if e != nil {
+	//		return nil, model.ErrParseDate
+	//	}
+	//	if eventDate.After(startDateTime) && eventDate.Before(endDateTime) {
+	//		retrievedEvents = append(retrievedEvents, *ev)
+	//	}
+	//}
+
+	if retrievedEvents == nil {
+		return nil, model.ErrEventNotFound
 	}
-
-	return nil, model.ErrEventNotFound
-}
-
-func (db *EventDB) GetEventByID(ID uint64) (retrievedEvent *model.Event, err error) {
-	for _, ev := range db.Events {
-		if ev.ID == ID {
-			return ev, nil
-		}
-	}
-
-	return nil, model.ErrEventNotFound
-}
-
-func (db *EventDB) CreateEvent(name string, count uint64, date string) (retrievedEvents *model.Event, err error) {
-	newEvent := model.Event{
-		ID:    db.LastID + 1,
-		Name:  name,
-		Count: count,
-		Date:  date,
-	}
-
-	db.Events = append(db.Events, &newEvent)
-
-	retrievedEvents, e := db.GetEventByID(db.LastID + 1)
-	if e != nil {
-		return nil, model.ErrInsertEventDB
-	}
-
-	db.LastID += 1
 
 	return retrievedEvents, nil
 }
 
-func (db *EventDB) UpdateEvent(ID, count uint64) (err error) {
-	event, ev := db.GetEventByID(ID)
-	if ev != nil {
-		return model.ErrUpdateEventDB
-	}
-
-	event.Count += count
-
-	return nil
-}
-
-func (db *EventFreqDB) StartDB() (err error) {
-	db.LastID = 0
-
-	return nil
-}
-
-func (db *EventFreqDB) GetEvents() (retrievedEvents []model.EventFreq, err error) {
-	for _, ev := range db.EventFrequencies {
-		retrievedEvents = append(retrievedEvents, *ev)
-	}
-	return retrievedEvents, nil
-}
-
-func (db *EventFreqDB) GetEventByID(ID uint64) (retrievedEvent *model.EventFreq, err error) {
-	for _, ev := range db.EventFrequencies {
-		if ev.ID == ID {
-			return ev, nil
-		}
-	}
-
-	return nil, model.ErrEventNotFound
-}
-
-func (db *EventFreqDB) GetEventByName(name string) (retrievedEvent *model.EventFreq, err error) {
-	for _, ev := range db.EventFrequencies {
-		if ev.Name == name {
-			return ev, nil
-		}
-	}
-
-	return nil, model.ErrEventNotFound
-}
-
-func (db *EventFreqDB) CreateEvent(name string, count uint64, hour uint64) (retrievedEvent *model.EventFreq, err error) {
-	var hourCount [24]uint64
-	hourCount[hour] = count
-
-	newEventFreq := model.EventFreq{
-		ID:    db.LastID + 1,
-		Name:  name,
-		TotalCount: count,
-		HourCount:  hourCount,
-	}
-
-	db.EventFrequencies = append(db.EventFrequencies, &newEventFreq)
-
-	retrievedEvent, e := db.GetEventByID(db.LastID + 1)
+func (db EventDB) GetEventByNameAndDate(name, date string) (retrievedEvent model.Event, err error) {
+	rows, e := db.Database.Query(fmt.Sprintf("SELECT * FROM eventDB WHERE name LIKE \"%s\" AND date LIKE \"%s\"", name, date))
 	if e != nil {
-		return nil, model.ErrInsertEventFreqDB
+		return model.Event{}, e
 	}
 
-	db.LastID += 1
+	for rows.Next() {
+		e = rows.Scan(&retrievedEvent.ID, &retrievedEvent.Date, &retrievedEvent.Name, &retrievedEvent.Count)
+		if e != nil {
+			return model.Event{}, e
+		}
+	}
 
+	e = rows.Close()
+	if e != nil {
+		return model.Event{}, e
+	}
+
+	if retrievedEvent.ID == 0 {
+		return model.Event{}, model.ErrEventNotFound
+	}
 	return retrievedEvent, nil
 }
 
-func (db *EventFreqDB) UpdateEvent(ID, count, hour uint64) (err error) {
-	event, e := db.GetEventByID(ID)
+func (db EventDB) GetEventByID(ID uint64) (retrievedEvent model.Event, err error) {
+	rows, e := db.Database.Query(fmt.Sprintf("SELECT * FROM eventDB WHERE ID=%d", ID))
 	if e != nil {
-		return model.ErrUpdateEventFreqDB
+		return model.Event{}, e
 	}
 
-	event.TotalCount += count
+	for rows.Next() {
+		e = rows.Scan(&retrievedEvent.ID, &retrievedEvent.Date, &retrievedEvent.Name, &retrievedEvent.Count)
+		if e != nil {
+			return model.Event{}, e
+		}
+	}
+
+	e = rows.Close()
+	if e != nil {
+		return model.Event{}, e
+	}
+
+	if retrievedEvent.ID == 0 {
+		return model.Event{}, model.ErrEventNotFound
+	}
+	return retrievedEvent, nil
+}
+
+func (db EventDB) CreateEvent(name string, count uint64, date string) (err error) {
+	stmt, e := db.Database.Prepare("INSERT into eventDB (date, name, count) VALUES (?, ?, ?)")
+	if e != nil {
+		return e
+	}
+
+	_, e = stmt.Exec(date, name, count)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
+func (db EventDB) UpdateEvent(ID, count uint64) (err error) {
+	event,e := db.GetEventByID(ID)
+	if e != nil {
+		return e
+	}
+
+	stmt, e := db.Database.Prepare("UPDATE eventDB SET count=? WHERE id=?")
+	if e != nil {
+		return e
+	}
+
+	_, e = stmt.Exec(event.Count + count, ID)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
+func (db EventFreqDB) GetEvents() (retrievedEvents []model.EventFreq, err error) {
+	rows, e := db.Database.Query("SELECT * FROM eventFreqDB")
+	if e != nil {
+		return nil, e
+	}
+
+	for rows.Next() {
+		var (
+			event model.EventFreq
+			HourCountString string
+		)
+
+		e = rows.Scan(&event.ID, &event.Name, &event.TotalCount, &HourCountString)
+		if e != nil {
+			return nil, e
+		}
+
+		e = json.Unmarshal([]byte(HourCountString), &event.HourCount)
+		if e != nil {
+			return nil, e
+		}
+
+		retrievedEvents = append(retrievedEvents, event)
+	}
+
+	e = rows.Close()
+	if e != nil {
+		return nil, e
+	}
+
+	return retrievedEvents, nil
+}
+
+func (db EventFreqDB) GetEventByID(ID uint64) (retrievedEvent model.EventFreq, err error) {
+	rows, e := db.Database.Query(fmt.Sprintf("SELECT * FROM eventFreqDB WHERE id=%d", ID))
+	if e != nil {
+		return model.EventFreq{}, e
+	}
+
+	for rows.Next() {
+		var HourCountString string
+
+		e = rows.Scan(&retrievedEvent.ID, &retrievedEvent.Name, &retrievedEvent.TotalCount, &HourCountString)
+		if e != nil {
+			return model.EventFreq{}, e
+		}
+
+		e = json.Unmarshal([]byte(HourCountString), &retrievedEvent.HourCount)
+		if e != nil {
+			return model.EventFreq{}, e
+		}
+	}
+
+	e = rows.Close()
+	if e != nil {
+		return model.EventFreq{}, e
+	}
+
+	if retrievedEvent.ID == 0 {
+		return model.EventFreq{}, model.ErrEventNotFound
+	}
+	return retrievedEvent, nil
+}
+
+func (db EventFreqDB) GetEventByName(name string) (retrievedEvent model.EventFreq, err error) {
+	rows, e := db.Database.Query(fmt.Sprintf("SELECT * FROM eventFreqDB WHERE name LIKE \"%s\"", name))
+	if e != nil {
+		return model.EventFreq{}, e
+	}
+
+	for rows.Next() {
+		var HourCountString string
+
+		e = rows.Scan(&retrievedEvent.ID, &retrievedEvent.Name, &retrievedEvent.TotalCount, &HourCountString)
+		if e != nil {
+			return model.EventFreq{}, e
+		}
+
+		e = json.Unmarshal([]byte(HourCountString), &retrievedEvent.HourCount)
+		if e != nil {
+			return model.EventFreq{}, e
+		}
+	}
+
+	e = rows.Close()
+	if e != nil {
+		return model.EventFreq{}, e
+	}
+
+	if retrievedEvent.ID == 0 {
+		return model.EventFreq{}, model.ErrEventNotFound
+	}
+	return retrievedEvent, nil
+}
+
+func (db EventFreqDB) CreateEvent(name string, count uint64, hour uint64) (err error) {
+	var hourCount [24]uint64
+	hourCount[hour] = count
+
+	stmt, e := db.Database.Prepare("INSERT into eventFreqDB (name, count, hour_count) VALUES (?, ?, ?)")
+	if e != nil {
+		return e
+	}
+
+	hourCountBytes, e := json.Marshal(hourCount)
+	if e != nil {
+		return e
+	}
+	hourCountString := string(hourCountBytes)
+
+	_, e = stmt.Exec(name, count, hourCountString)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
+func (db EventFreqDB) UpdateEvent(ID, count, hour uint64) (err error) {
+	event, e := db.GetEventByID(ID)
+	if e != nil {
+		return e
+	}
+
 	event.HourCount[hour] += count
+	newTotalCount := event.TotalCount + count
+
+	stmt, e := db.Database.Prepare("UPDATE eventFreqDB SET count=?, hour_count=? where ID=?")
+	if e != nil {
+		return e
+	}
+
+	hourCountBytes, e := json.Marshal(event.HourCount)
+	if e != nil {
+		return e
+	}
+	hourCountString := string(hourCountBytes)
+
+	_, e = stmt.Exec(newTotalCount, hourCountString, ID)
+	if e != nil {
+		return e
+	}
 
 	return nil
 }

@@ -1,34 +1,24 @@
 package main
 
 import (
+	"database/sql"
 	"eventTracker/cmd/server"
 	"eventTracker/internal/db"
 	"eventTracker/internal/event"
+	"fmt"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
-	eventList, eventFreqList := db.DBsStartPoint(true)
-	var (
-		eventDB = db.EventDB{
-			Events: eventList,
-			LastID: 4,
-		}
-		eventFrequenciesDB = db.EventFreqDB{
-			EventFrequencies: eventFreqList,
-			LastID:           0,
-		}
-	)
-
-	env := server.Env{
-		EventService: event.EventService{
-			EventDB:            &eventDB,
-			EventFrequenciesDB: &eventFrequenciesDB,
-		},
+	database, err := sql.Open("sqlite3", "./db.db")
+	if err != nil {
+		panic(fmt.Sprintf("error loading the database: %s", err.Error()))
 	}
 
-	e := env.EventService.StartDBs()
-	if e != nil {
-		panic("error starting dbs")
+	env := server.Env{
+		EventService: event.EventService{},
+		EventDBHandler: db.EventDB{Database: database},
+		EventFreqDBHandler: db.EventFreqDB{Database: database},
 	}
 
 	server.HandleRequests(env)

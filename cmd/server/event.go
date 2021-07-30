@@ -23,12 +23,12 @@ func (env Env) ReturnEvents(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	if len(queryParams) > 0 {
-		retrievedEvents, err = env.EventService.EventsByDateRange(queryParams["start_date"][0], queryParams["end_date"][0])
+		retrievedEvents, err = env.EventService.EventsByDateRange(env.EventDBHandler, queryParams["start_date"][0], queryParams["end_date"][0])
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	} else {
-		retrievedEvents, err = env.EventService.AllEvents()
+		retrievedEvents, err = env.EventService.AllEvents(env.EventDBHandler)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -45,7 +45,7 @@ func (env Env) ReturnEvent(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	name := params["name"]
 
-	retrievedEvent, err := env.EventService.EventsByName(name)
+	retrievedEvent, err := env.EventService.EventsByName(env.EventDBHandler, name)
 	if errors.Is(err, model.ErrEventNotFound) {
 		http.Error(w, fmt.Sprintf(err.Error(), name), http.StatusNotFound)
 		return
@@ -75,7 +75,7 @@ func (env Env) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Json decoder error: %s", err.Error()), http.StatusBadRequest)
 		return
 	}
-	err = env.EventService.CreateEvent(name, body.Count, time.Now())
+	err = env.EventService.CreateEvent(env.EventDBHandler, env.EventFreqDBHandler, name, body.Count, time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		println(fmt.Sprintf("error: %v", err.Error()))
@@ -89,7 +89,7 @@ func (env Env) ReturnEventFrequency(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	name := params["name"]
 
-	retrievedEvent, err := env.EventService.EventFrequencyByName(name)
+	retrievedEvent, err := env.EventService.EventFrequencyByName(env.EventFreqDBHandler, name)
 	if errors.Is(err, model.ErrEventNotFound) {
 		http.Error(w, fmt.Sprintf(err.Error(), name), http.StatusNotFound)
 		return
@@ -107,7 +107,7 @@ func (env Env) ReturnEventFrequency(w http.ResponseWriter, r *http.Request) {
 }
 
 func (env Env) ReturnAllEventsFrequencies(w http.ResponseWriter, r *http.Request) {
-	retrievedEvents, err := env.EventService.AllEventsFrequencies()
+	retrievedEvents, err := env.EventService.AllEventsFrequencies(env.EventFreqDBHandler)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -123,7 +123,7 @@ func (env Env) ReturnEventFrequencyHistogram(w http.ResponseWriter, r *http.Requ
 	params := mux.Vars(r)
 	name := params["name"]
 
-	retrievedEvent, err := env.EventService.EventFrequencyByName(name)
+	retrievedEvent, err := env.EventService.EventFrequencyByName(env.EventFreqDBHandler, name)
 	if errors.Is(err, model.ErrEventNotFound) {
 		http.Error(w, fmt.Sprintf(err.Error(), name), http.StatusNotFound)
 		return
