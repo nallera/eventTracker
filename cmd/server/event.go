@@ -23,6 +23,7 @@ func (env Env) ReturnEvents(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	if len(queryParams) > 0 {
+		//TODO check query params format
 		retrievedEvents, err = env.EventService.EventsByDateRange(env.EventDBHandler, queryParams["start_date"][0], queryParams["end_date"][0])
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

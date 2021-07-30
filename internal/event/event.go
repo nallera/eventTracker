@@ -58,7 +58,7 @@ func (es EventService) EventByID(EventDBHandler db.EventDBHandler, ID uint64) (e
 }
 
 func (es EventService) CreateEvent(EventDBHandler db.EventDBHandler, EventDBFreqHandler db.EventFreqDBHandler, name string, count uint64, date time.Time) (err error) {
-	dateYYYYmmdd := date.Format("20060102")
+	dateYYYYmmdd := date.Format("2006-01-02")
 
 	event, e := EventDBHandler.GetEventByNameAndDate(name, dateYYYYmmdd)
 	if errors.Is(e, model.ErrEventNotFound) {

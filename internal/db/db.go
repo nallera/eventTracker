@@ -88,24 +88,26 @@ func (db EventDB) GetEventsByName(name string) (retrievedEvents []model.Event, e
 }
 
 func (db EventDB) GetEventsByDateRange(startDate, endDate string) (retrievedEvents []model.Event, err error) {
-	//startDateTime, e := time.Parse("20060102", startDate)
-	//if e != nil {
-	//	return nil, model.ErrParseDate
-	//}
-	//endDateTime, e := time.Parse("20060102", endDate)
-	//if e != nil {
-	//	return nil, model.ErrParseDate
-	//}
+	rows, e := db.Database.Query(fmt.Sprintf("SELECT * FROM eventDB WHERE date BETWEEN \"%s\" and \"%s\"", startDate, endDate))
+	if e != nil {
+		return nil, e
+	}
 
-	//for _, ev := range db.Events {
-	//	eventDate, e := time.Parse("20060102", ev.Date)
-	//	if e != nil {
-	//		return nil, model.ErrParseDate
-	//	}
-	//	if eventDate.After(startDateTime) && eventDate.Before(endDateTime) {
-	//		retrievedEvents = append(retrievedEvents, *ev)
-	//	}
-	//}
+	for rows.Next() {
+		var event model.Event
+
+		e = rows.Scan(&event.ID, &event.Date, &event.Name, &event.Count)
+		if e != nil {
+			return nil, e
+		}
+
+		retrievedEvents = append(retrievedEvents, event)
+	}
+
+	e = rows.Close()
+	if e != nil {
+		return nil, e
+	}
 
 	if retrievedEvents == nil {
 		return nil, model.ErrEventNotFound
