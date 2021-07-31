@@ -7,12 +7,14 @@ Event tracking microservice that allows for events to be recorded, and then retr
 
 ### User (/api/v1 subroute)
 These endpoints are intended for user usage. The admin accounts are also authorized to use these.
+
 #### POST
 - /events/{name}
     - Allows the user to create a new event occurrence. The name of the event is a parameter (*name*) in the URL.
     - The body can include the following parameters:
       - "count": the event occurrences count.
       - "date": the date and hour in which those occurrences happened, must be in the format "YYYY-MM-DD HH:mm:ss".
+
 ####GET
 - /events
   - Returns the total list of registered events, including the count and date of occurrence, summing up the count by dates.
@@ -25,6 +27,7 @@ These endpoints are intended for user usage. The admin accounts are also authori
 
 ### Admin (/admin/v1 subroute)
 These endpoints are intended for admin usage, and involve more _dangerous_ operations.
+
 #### GET
 - /events/{name}
   - Returns all the recorded occurrences of a given event (the *name* parameter in the URL), summing up the count by dates.
@@ -32,6 +35,7 @@ These endpoints are intended for admin usage, and involve more _dangerous_ opera
   - Returns the total count of occurrences of a given event (the *name* parameter in the URL) and its hourly distribution.
 - /event_frequencies
   - Returns the total count of occurrences of all the registered events and their hourly distribution.
+
 #### DELETE
 - /events/{name}
   - Deletes all the occurrences of a given event (the *name* parameter in the URL).
