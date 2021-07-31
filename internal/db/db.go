@@ -10,19 +10,24 @@ import (
 type EventDBHandler interface {
 	GetEvents() (events []model.Event, err error)
 	GetEventsByName(name string) (retrievedEvents []model.Event, err error)
+	GetEventsIDsByName(name string) (retrievedEventsIDs []uint64, err error)
 	GetEventsByDateRange(startDate, endDate string) (retrievedEvents []model.Event, err error)
 	GetEventByNameAndDate(name, date string) (retrievedEvent model.Event, err error)
 	GetEventByID(ID uint64) (retrievedEvent model.Event, err error)
 	CreateEvent(name string, count uint64, date string) (err error)
 	UpdateEvent(ID, count uint64) (err error)
+	DeleteEvents(IDs []uint64) (err error)
+	DeleteEvent(ID uint64) (err error)
 }
 
 type EventFreqDBHandler interface {
 	GetEvents() (retrievedEvents []model.EventFreq, err error)
+	GetEventsHistory() (retrievedEvents []model.EventHistory, err error)
 	GetEventByID(ID uint64) (retrievedEvent model.EventFreq, err error)
 	GetEventByName(name string) (retrievedEvent model.EventFreq, err error)
 	CreateEvent(name string, count uint64, hour uint64) (err error)
 	UpdateEvent(ID, count, hour uint64) (err error)
+	DeleteEvent(ID uint64) (err error)
 }
 
 type EventDB struct {
@@ -85,6 +90,35 @@ func (db EventDB) GetEventsByName(name string) (retrievedEvents []model.Event, e
 	}
 
 	return retrievedEvents, nil
+}
+
+func (db EventDB) GetEventsIDsByName(name string) (retrievedEventsIDs []uint64, err error) {
+	rows, e := db.Database.Query(fmt.Sprintf("SELECT ID FROM eventDB WHERE name LIKE \"%s\"", name))
+	if e != nil {
+		return nil, e
+	}
+
+	for rows.Next() {
+		var retrievedID uint64
+
+		e = rows.Scan(&retrievedID)
+		if e != nil {
+			return nil, e
+		}
+
+		retrievedEventsIDs = append(retrievedEventsIDs, retrievedID)
+	}
+
+	e = rows.Close()
+	if e != nil {
+		return nil, e
+	}
+
+	if retrievedEventsIDs == nil {
+		return nil, model.ErrEventNotFound
+	}
+
+	return retrievedEventsIDs, nil
 }
 
 func (db EventDB) GetEventsByDateRange(startDate, endDate string) (retrievedEvents []model.Event, err error) {
@@ -197,8 +231,36 @@ func (db EventDB) UpdateEvent(ID, count uint64) (err error) {
 	return nil
 }
 
+func (db EventDB) DeleteEvents(IDs []uint64) (err error) {
+	for _, ID := range IDs {
+		e := db.DeleteEvent(ID)
+		if e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+func (db EventDB) DeleteEvent(ID uint64) (err error) {
+	stmt, e := db.Database.Prepare("DELETE FROM eventDB WHERE id=?")
+	if e != nil {
+		return e
+	}
+
+	_, e = stmt.Exec(ID)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
 func (db EventFreqDB) GetEvents() (retrievedEvents []model.EventFreq, err error) {
-	rows, e := db.Database.Query("SELECT * FROM eventFreqDB")
+	var (
+		rows *sql.Rows
+		e error
+	)
+	rows, e = db.Database.Query("SELECT * FROM eventFreqDB")
 	if e != nil {
 		return nil, e
 	}
@@ -215,6 +277,35 @@ func (db EventFreqDB) GetEvents() (retrievedEvents []model.EventFreq, err error)
 		}
 
 		e = json.Unmarshal([]byte(HourCountString), &event.HourCount)
+		if e != nil {
+			return nil, e
+		}
+
+		retrievedEvents = append(retrievedEvents, event)
+	}
+
+	e = rows.Close()
+	if e != nil {
+		return nil, e
+	}
+
+	return retrievedEvents, nil
+}
+
+func (db EventFreqDB) GetEventsHistory() (retrievedEvents []model.EventHistory, err error) {
+	var (
+		rows *sql.Rows
+		e error
+	)
+	rows, e = db.Database.Query("SELECT id,name,count FROM eventFreqDB")
+	if e != nil {
+		return nil, e
+	}
+
+	for rows.Next() {
+		var event model.EventHistory
+
+		e = rows.Scan(&event.ID, &event.Name, &event.TotalCount)
 		if e != nil {
 			return nil, e
 		}
@@ -336,6 +427,20 @@ func (db EventFreqDB) UpdateEvent(ID, count, hour uint64) (err error) {
 	hourCountString := string(hourCountBytes)
 
 	_, e = stmt.Exec(newTotalCount, hourCountString, ID)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
+func (db EventFreqDB) DeleteEvent(ID uint64) (err error) {
+	stmt, e := db.Database.Prepare("DELETE FROM eventFreqDB where ID=?")
+	if e != nil {
+		return e
+	}
+
+	_, e = stmt.Exec(ID)
 	if e != nil {
 		return e
 	}

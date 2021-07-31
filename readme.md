@@ -1,1 +1,49 @@
-asumo que se necesita mas velocidad en escritura que en generacion del grafico, asi que voy a guardar los datos rapido, y cuando necesito grafico hago procesamiento
+# Event Tracker Challenge
+
+## Project Description
+Event tracking microservice that allows for events to be recorded, and then retrieved in various ways. 
+
+## Endpoints
+
+### User (/v1/api subroute)
+These endpoints are intended for user usage. The admin accounts are also authorized to use these.
+#### POST
+- /events/{name}
+    - Allows the user to create a new event occurrence. The name of the event is a parameter (*name*) in the URL.
+    - The body can include the following parameters:
+      - "count": the event occurrences count.
+      - "date": the date and hour in which those occurrences happened, must be in the format "YYYY-MM-DD HH:mm:ss".
+####GET
+- /events
+  - Returns the total list of registered events, including the count and date of occurrence, summing up the count by dates.
+    - Optional query parameters:
+      - "start_date" and "end_date": These determine a date range for the results, must be in the format "YYYY-MM-DD".
+- /event_history
+  - Returns a history of all the registered events, including a summed up count
+- /event_frequencies/{name}/hist
+  - Returns a png image with a histogram showing the distribution of a given event (the *name* parameter in the URL) in the database, along the 24 hours of a day.
+
+### Admin
+These endpoints are intended for admin usage, and involve more _dangerous_ operations.
+#### GET
+- /events/{name}
+  - Returns all the recorded occurrences of a given event (the *name* parameter in the URL), summing up the count by dates.
+- /event_frequencies/{name}
+  - Returns the total count of occurrences of a given event (the *name* parameter in the URL) and its hourly distribution.
+- /event_frequencies
+  - Returns the total count of occurrences of all the registered events and their hourly distribution.
+#### DELETE
+- /events/{name}
+  - Deletes all the occurrences of a given event (the *name* parameter in the URL).
+
+### Health (/health subroute)
+
+- /ping
+
+## Authorization 
+
+Minimal API Key Authorization is required to use the API. There are two levels of authorization: user and admin.
+
+## Database
+
+The database used is a SQLite3 database.

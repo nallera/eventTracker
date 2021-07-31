@@ -15,8 +15,10 @@ type EventServiceI interface {
  	AllEvents(EventDBHandler db.EventDBHandler) (events []model.Event, err error)
  	EventByID(EventDBHandler db.EventDBHandler, ID uint64) (event model.Event, err error)
  	CreateEvent(EventDBHandler db.EventDBHandler, EventDBFreqHandler db.EventFreqDBHandler, name string, count uint64, date time.Time) (err error)
+ 	DeleteEvent(EventDBHandler db.EventDBHandler, EventDBFreqHandler db.EventFreqDBHandler, name string) (err error)
 	EventFrequencyByName(EventDBFreqHandler db.EventFreqDBHandler, name string) (eventFreq model.EventFreq, err error)
 	AllEventsFrequencies(EventDBFreqHandler db.EventFreqDBHandler) (events []model.EventFreq, err error)
+	AllEventsHistory(EventDBFreqHandler db.EventFreqDBHandler) (events []model.EventHistory, err error)
 }
 
 type EventService struct {}
@@ -78,8 +80,6 @@ func (es EventService) CreateEvent(EventDBHandler db.EventDBHandler, EventDBFreq
 			return errors.New(fmt.Sprintf(model.ErrUpdateEventDB.Error(), e.Error()))
 		}
 	}
-	ev,_ := EventDBHandler.GetEvents()
-	println(fmt.Sprintf("eventDB: %v", ev))
 
 	hour := date.Format("15")
 	hourUint, e := strconv.ParseUint(hour, 10, 8)
@@ -105,8 +105,38 @@ func (es EventService) CreateEvent(EventDBHandler db.EventDBHandler, EventDBFreq
 			return errors.New(fmt.Sprintf(model.ErrUpdateEventFreqDB.Error(), e.Error()))
 		}
 	}
-	evf,_ := EventDBFreqHandler.GetEvents()
-	println(fmt.Sprintf("eventFreqDB: %v", evf))
+
+	return nil
+}
+
+func (es EventService) DeleteEvent(EventDBHandler db.EventDBHandler, EventDBFreqHandler db.EventFreqDBHandler, name string) (err error) {
+	IDsToDelete, e := EventDBHandler.GetEventsIDsByName(name)
+	if errors.Is(e, model.ErrEventNotFound) {
+		return errors.New(fmt.Sprintf(model.ErrDoesntExistEventDB.Error(), name))
+	} else if e != nil {
+		return errors.New(fmt.Sprintf("error getting event by name and date: %s", e))
+	} else {
+		println(fmt.Sprintf("Deleting event %s", name))
+
+		e = EventDBHandler.DeleteEvents(IDsToDelete)
+		if e != nil {
+			return errors.New(fmt.Sprintf(model.ErrDeleteEventDB.Error(), e.Error()))
+		}
+	}
+
+	eventFreq, e := EventDBFreqHandler.GetEventByName(name)
+	if errors.Is(e, model.ErrEventNotFound) {
+		return errors.New(fmt.Sprintf(model.ErrDoesntExistEventFreqDB.Error(), name))
+	} else if e != nil{
+		return errors.New(fmt.Sprintf("error getting event freq by name: %s", e))
+	} else {
+		println(fmt.Sprintf("Deleting event %s frequency", name))
+
+		e = EventDBFreqHandler.DeleteEvent(eventFreq.ID)
+		if e != nil {
+			return errors.New(fmt.Sprintf(model.ErrDeleteEventFreqDB.Error(), e.Error()))
+		}
+	}
 
 	return nil
 }
@@ -115,6 +145,15 @@ func (es EventService) AllEventsFrequencies(EventDBFreqHandler db.EventFreqDBHan
 	events, e := EventDBFreqHandler.GetEvents()
 	if e != nil {
 		return []model.EventFreq{}, nil
+	}
+
+	return events, nil
+}
+
+func (es EventService) AllEventsHistory(EventDBFreqHandler db.EventFreqDBHandler) (events []model.EventHistory, err error) {
+	events, e := EventDBFreqHandler.GetEventsHistory()
+	if e != nil {
+		return []model.EventHistory{}, nil
 	}
 
 	return events, nil

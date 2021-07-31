@@ -14,7 +14,14 @@ type EventFreq struct {
 	HourCount  [24]uint64 `json:"hour_count"`
 }
 
+type EventHistory struct {
+	ID         uint64     `json:"-"`
+	Name       string     `json:"event"`
+	TotalCount uint64     `json:"count"`
+}
+
 type EventBody struct {
 	Count uint64 `json:"count,omitempty"`
+	Date  string `json:"date,omitempty"`
 }
 

@@ -15,10 +15,10 @@ func PlotHistogram(values plotter.Values, name string) io.WriterTo {
 
 	p.X.Label.Text = "Hour"
 	p.X.Max = 24
-	p.X.Tick.Marker = plot.DefaultTicks{}
+	p.X.Tick.Marker = plot.DefaultTicks{NumberOfTicks: 24}
 
 	p.Y.Label.Text = "% of occurence"
-	p.Y.Tick.Marker = plot.ConstantTicks{}
+	p.Y.Tick.Marker = plot.DefaultTicks{NumberOfTicks: 10}
 
 	barChart, err := plotter.NewBarChart(values, 5)
 	if err != nil {
