@@ -5,7 +5,7 @@ Event tracking microservice that allows for events to be recorded, and then retr
 
 ## Endpoints
 
-### User (/v1/api subroute)
+### User (/api/v1 subroute)
 These endpoints are intended for user usage. The admin accounts are also authorized to use these.
 #### POST
 - /events/{name}
@@ -23,7 +23,7 @@ These endpoints are intended for user usage. The admin accounts are also authori
 - /event_frequencies/{name}/hist
   - Returns a png image with a histogram showing the distribution of a given event (the *name* parameter in the URL) in the database, along the 24 hours of a day.
 
-### Admin
+### Admin (/admin/v1 subroute)
 These endpoints are intended for admin usage, and involve more _dangerous_ operations.
 #### GET
 - /events/{name}
@@ -39,6 +39,7 @@ These endpoints are intended for admin usage, and involve more _dangerous_ opera
 ### Health (/health subroute)
 
 - /ping
+  - Just a simple ping check.
 
 ## Authorization 
 

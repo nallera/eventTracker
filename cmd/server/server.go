@@ -35,7 +35,7 @@ func HandleRequests(env Env) {
 
 	apiRoute.HandleFunc("/event_frequencies/{name}/hist", env.ReturnEventFrequencyHistogram).Methods("GET")
 
-	adminRoute := router.PathPrefix("/admin").Subrouter()
+	adminRoute := router.PathPrefix("/admin/v1").Subrouter()
 	adminRoute.HandleFunc("/events/{name}", env.ReturnEvent).Methods("GET")
 	adminRoute.HandleFunc("/events/{name}", env.DeleteEvent).Methods("DELETE")
 	adminRoute.HandleFunc("/event_frequencies/{name}", env.ReturnEventFrequency).Methods("GET")
