@@ -15,7 +15,7 @@ These endpoints are intended for user usage. The admin accounts are also authori
       - "count": the event occurrences count.
       - "date": the date and hour in which those occurrences happened, must be in the format "YYYY-MM-DD HH:mm:ss".
 
-####GET
+#### GET
 - /events
   - Returns the total list of registered events, including the count and date of occurrence, summing up the count by dates.
     - Optional query parameters:
