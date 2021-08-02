@@ -21,7 +21,7 @@ These endpoints are intended for user usage. The admin accounts are also authori
     - Optional query parameters:
       - "start_date" and "end_date": These determine a date range for the results, must be in the format "YYYY-MM-DD".
 - /event_history
-  - Returns a history of all the registered events, including a summed up count
+  - Returns a history of all the registered events, and the total count for each one.
 - /event_frequencies/{name}/hist
   - Returns a png image with a histogram showing the distribution of a given event (the *name* parameter in the URL) in the database, along the 24 hours of a day.
 
