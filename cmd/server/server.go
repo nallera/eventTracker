@@ -63,7 +63,8 @@ func AuthMiddleware(h http.Handler) http.Handler {
 		if strings.Split(r.URL.Path, "/")[1] == "admin" {
 			apiKeysToCheck = config.AdminApiKeys
 		} else {
-			apiKeysToCheck = config.ApiKeys
+			apiKeysToCheck = append(apiKeysToCheck, config.ApiKeys...)
+			apiKeysToCheck = append(apiKeysToCheck, config.AdminApiKeys...)
 		}
 
 		authorized := false
