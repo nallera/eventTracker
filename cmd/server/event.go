@@ -87,17 +87,20 @@ func (env Env) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Json decoder error: %s", err.Error()), http.StatusBadRequest)
 		return
 	}
-	parsedDate, err := time.Parse("2006-01-02 15:04:05", body.Date)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error trying to decode date: %s", err.Error()), http.StatusBadRequest)
-		return
+
+	var parsedDate time.Time
+	if body.Date == "" {
+		parsedDate = time.Now()
+	} else {
+		parsedDate, err = time.Parse("2006-01-02 15:04:05", body.Date)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error trying to decode date: %s", err.Error()), http.StatusBadRequest)
+			return
+		}
 	}
 
 	if body.Count == 0 {
 		body.Count = 1
-	}
-	if parsedDate.IsZero() {
-		parsedDate = time.Now()
 	}
 
 	err = env.EventService.CreateEvent(env.EventDBHandler, env.EventFreqDBHandler, name, body.Count, parsedDate)
