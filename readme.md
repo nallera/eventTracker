@@ -48,6 +48,7 @@ These endpoints are intended for admin usage, and involve more _dangerous_ opera
 ## Authorization 
 
 Minimal API Key Authorization is required to use the API. There are two levels of authorization: user and admin.
+The API key is sent via a 'x-api-key' header.
 
 ## Database
 
