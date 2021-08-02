@@ -14,6 +14,7 @@ These endpoints are intended for user usage. The admin accounts are also authori
     - The request body (in JSON format) can include the following parameters:
       - "count": the event occurrences count.
       - "date": the date and hour in which those occurrences happened, must be in the format "YYYY-MM-DD HH:mm:ss".
+    - Example:  POST {base_url}/api/v1/events/login1 with an empty body: creates a single 'login1' event occurrence, at the current time.
 
 #### GET
 - /events
