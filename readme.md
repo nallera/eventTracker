@@ -10,7 +10,7 @@ These endpoints are intended for user usage. The admin accounts are also authori
 
 #### POST
 - /events/{name}
-    - Allows the user to create a new event occurrence. The name of the event is a parameter (*name*) in the URL.
+    - Allows the user to create a new event occurrence. The name of the event is a parameter (*name*) in the URL. If the event was already registered before, a new post registers new occurrences.
     - The request body (in JSON format) can include the following parameters:
       - "count": the event occurrences count.
       - "date": the date and hour in which those occurrences happened, must be in the format "YYYY-MM-DD HH:mm:ss".
